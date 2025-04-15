@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 400px;
+      margin: auto;
+      position: relative;
+    }
+
+    .title {
+      background-color: lightblue;
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 10px;
+      font-weight: bold;
+      text-align: center;
+      position: relative;
+    }
+
+    .subtitle, .subtitle-left, .subtitle-RightUp {
+      position: absolute;
+      font-size: 12px;
+      color: #333;
+      opacity: 0.8;
+    }
+
+    .subtitle { bottom: 5px; right: 10px; }
+    .subtitle-left { bottom: 5px; left: 10px; }
+    .subtitle-RightUp { top: 5px; right: 10px; }
+
+    .input-box {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+
+    .input-box label {
+      background: lightgray;
+      flex: 1;
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    .input-box input {
+      flex: 2;
+      padding: 10px;
+      text-align: right;
+      border: 1px solid #ccc;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .button-group button {
+      flex: 0 0 17%;
+      padding: 8px 4px;
+      font-weight: bold;
+      font-size: clamp(11px, 3.5vw, 14px);
+      white-space: nowrap;
+    }
+
+    .카드버튼 { background: dodgerblue; color: #030303; }
+    .건보버튼 { background: gray; color: #030303; }
+    .연금버튼 { background: #2b7059; color: #030303; }
+    .전월세버튼 { background: #a288a5; color: #030303; }
+    .주신보 { background: #7cd30b; color: #030303; }
+
+
+    .activeButton {
+      transform: scale(1.1);
+      font-size: 0.9em;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      opacity: 1;
+    }
+
+    .inactiveButton {
+      opacity: 0.5;
+    }
+
+    .popup-container {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .popup-content {
+      background-color: #fefefe;
+      padding: 10px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 1600px;
+      border-radius: 10px;
+      box-sizing: border-box;
+    }
+
+    .popup-content img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+    }
+  </style>
+
+  <script>
+    let selectedType = "";
+
+    function formatNumber(input) {
+      let value = input.value.replace(/,/g, '');
+      if (!isNaN(value) && value !== '') {
+        input.value = parseInt(value).toLocaleString();
+      }
+    }
+
+    function formatPercentage(input) {
+      let value = input.value.replace('%', '');
+      const regex = /^\d{0,2}(\.\d{0,2})?$/;
+      if (value === '' || regex.test(value)) {
+        input.value = value + '%';
+        input.dataset.previousValidValue = input.value;
+      } else {
+        input.value = input.dataset.previousValidValue || '';
+      }
+      if (input.value === '%') input.value = '';
+    }
+
+    function handlePercentageBackspace(input, event) {
+      if (event.keyCode === 8) {
+        let value = input.value;
+        let caretPosition = input.selectionStart;
+        if (caretPosition > 0 && caretPosition === value.length && value.endsWith('%')) {
+          input.value = value.slice(0, -1);
+          input.selectionStart = caretPosition - 1;
+          input.selectionEnd = caretPosition - 1;
+          event.preventDefault();
+        }
+      }
+    }
+
+    function 월납부액계산() {
+      let 대출금액 = document.getElementById("대출금액").value.replace(/,/g, '');
+      let 대출금리 = document.getElementById("대출금리").value.replace('%', '');
+      if (대출금액 && 대출금리 && !isNaN(대출금액) && !isNaN(대출금리)) {
+        let 월상환액 = (대출금액 * (parseFloat(대출금리) / 100)) / 12;
+        document.getElementById("월상환액").value = parseInt(월상환액).toLocaleString();
+        calculateDTI();
+      } else {
+        document.getElementById("월상환액").value = "";
+        document.getElementById("DTI").value = "";
+      }
+    }
+
+    function calculateDTI() {
+      let 월상환액 = document.getElementById("월상환액").value.replace(/,/g, '') || 0;
+      let 부채금액 = document.getElementById("부채금액").value.replace(/,/g, '') || 0;
+      let 부채금리 = document.getElementById("부채금리").value.replace('%', '') || 0;
+      let 연소득 = document.getElementById("연소득").value.replace(/,/g, '') || 0;
+      let 부채상환액 = (parseFloat(부채금액) * parseFloat(부채금리)) / 1200;
+      let 총월부채상환액 = parseFloat(월상환액) + 부채상환액;
+      let 월소득 = parseFloat(연소득) / 12;
+      let DTI = (총월부채상환액 / 월소득) * 100;
+      let dtiField = document.getElementById("DTI");
+
+      if (!isNaN(DTI)) {
+        dtiField.value = DTI.toFixed(2) + "%";
+        dtiField.style.color = DTI >= 40 ? "red" : "black";
+        dtiField.style.fontWeight = DTI >= 40 ? "bold" : "normal";
+      } else {
+        dtiField.value = "";
+        dtiField.style.color = "black";
+        dtiField.style.fontWeight = "normal";
+      }
+    }
+
+    function updateFields(type) {
+      selectedType = type;
+      document.getElementById("annualUsage").value = "";
+      document.getElementById("conversionAmount").value = "";
+
+      let formula = document.getElementById("conversionFormula");
+      let annualUsageLabel = document.querySelector(".blue label");
+      let buttons = document.querySelectorAll(".button-group button");
+
+      buttons.forEach(btn => btn.classList.remove("activeButton", "inactiveButton"));
+
+      if (type === "카드사용액") {
+        formula.value = "연 사용액 ÷ 43.4% × 90%";
+        annualUsageLabel.textContent = "연 사용액";
+        document.querySelector(".카드버튼").classList.add("activeButton");
+      } else if (type === "건강보험") {
+        formula.value = "3개월 평균 금액 ÷ 3.545% × 12 × 95%";
+        annualUsageLabel.textContent = "평균 금액";
+        document.querySelector(".건보버튼").classList.add("activeButton");
+      } else if (type === "연금납부") {
+        formula.value = "3개월 평균 금액 ÷ 9% × 12 × 95%";
+        annualUsageLabel.textContent = "평균 금액";
+        document.querySelector(".연금버튼").classList.add("activeButton");
+      } else if (type === "전월세") {
+        formula.value = "HF,HUG 전환율 5.8% + 보증금";
+        annualUsageLabel.textContent = "1년 월세";
+        document.querySelector(".전월세버튼").classList.add("activeButton");  
+      } else if (type === "주신보") {
+        formula.value = "연소득 × 3.5 ÷ 90% × 110% / 120%";
+        annualUsageLabel.textContent = "연소득";
+        document.querySelector(".주신보").classList.add("activeButton");
+      }
+
+      buttons.forEach(btn => {
+        if (!btn.classList.contains("activeButton")) {
+          btn.classList.add("inactiveButton");
+        }
+      });
+
+      updateConversionAmount();
+    }
+
+    function updateConversionAmount() {
+      let annualUsage = document.getElementById("annualUsage").value.replace(/,/g, '');
+      let conversionAmount = document.getElementById("conversionAmount");
+      let incomeField = document.getElementById("연소득");
+
+      if (!annualUsage || isNaN(annualUsage)) {
+        conversionAmount.value = "";
+        incomeField.value = "";
+        return;
+      }
+
+      let convertedValue = 0;
+      let 주신보110 = annualUsage * 3.5 / 0.9 * 1.1;
+      let 주신보120 = annualUsage * 3.5 / 0.9 * 1.2;
+      if (selectedType === "카드사용액") {
+        convertedValue = (annualUsage / 0.434) * 0.9;
+      } else if (selectedType === "건강보험") {
+        convertedValue = (annualUsage / 0.03545) * 12 * 0.95;
+      } else if (selectedType === "연금납부") {
+        convertedValue = (annualUsage / 0.09) * 12 * 0.95;
+      } else if (selectedType === "전월세") {
+        convertedValue = (annualUsage / 0.058);
+      } else if (selectedType === "주신보") {
+        const strValue =
+        Math.floor(주신보110).toLocaleString() + " / " + Math.floor(주신보120).toLocaleString();
+        conversionAmount.value = strValue;
+        return; // 숫자 계산 건너뜀
+      }
+      conversionAmount.value = parseInt(convertedValue).toLocaleString();
+
+      if (["카드사용액", "건강보험", "연금납부"].includes(selectedType)) {
+        const incomeValue = Math.min(convertedValue, 50000000);
+        incomeField.value = parseInt(incomeValue).toLocaleString();
+        calculateDTI();
+      }
+    }
+
+    function resetFields() {
+      ["conversionAmount", "conversionFormula", "월상환액", "대출금액", "대출금리", "연소득", "부채금액", "부채금리", "DTI", "annualUsage"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      document.getElementById("conversionFormula").value = "계산할 방법 선택하세요";
+      selectedType = "";
+      document.querySelectorAll(".button-group button").forEach(btn => btn.classList.remove("activeButton", "inactiveButton"));
+    }
+
+    function clearInputField(inputId) {
+      document.getElementById(inputId).value = "";
+    }
+
+    function setupPopupButton() {
+      const popupContainer = document.getElementById("imagePopup");
+      const futureIncomePopupContainer = document.getElementById("futureIncomePopup");
+
+      document.getElementById("showPopup").addEventListener("click", () => {
+        popupContainer.style.display = "flex";
+      });
+
+      document.getElementById("showFutureIncomePopup").addEventListener("click", () => {
+        futureIncomePopupContainer.style.display = "flex";
+      });
+
+      window.addEventListener("click", event => {
+        if (event.target == popupContainer) {
+          popupContainer.style.display = "none";
+        }
+        if (event.target == futureIncomePopupContainer) {
+          futureIncomePopupContainer.style.display = "none";
+        }
+      });
+    }
+
+    function startWorkerRecordAccess() {
+      if (window.Worker) {
+        const workerCode = `
+          self.addEventListener('message', () => {
+            fetch("https://script.google.com/macros/s/AKfycbxigkf7jF5UlEz2NUn1DpQj6TEh7tX0hV8ryrVtD5VzMYFC0WOz5RDIhCmS1IGZD51n/exec", {
+              mode: 'no-cors',
+            }).catch((error) => {
+              console.error('접속 기록 실패:', error);
+            });
+          });
+        `;
+        const blob = new Blob([workerCode], { type: "application/javascript" });
+        const worker = new Worker(URL.createObjectURL(blob));
+        worker.postMessage("start");
+      } else {
+        console.warn("Web Worker를 지원하지 않는 브라우저입니다.");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      resetFields();
+      setupPopupButton();
+      startWorkerRecordAccess();
+      document.querySelector(".카드버튼").click();
+      const now = new Date();
+      const formattedTime = now.getFullYear().toString().slice(2) +
+                      String(now.getMonth() + 1).padStart(2, '0') +
+                      String(now.getDate()).padStart(2, '0') + "_" +
+                      String(now.getHours()).padStart(2, '0') +
+                      String(now.getMinutes()).padStart(2, '0');
+      // document.getElementById("currentTime").textContent = formattedTime;
+
+
+
+    });
+  </script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="title" onclick="resetFields()">
+      DTI 간편 계산기
+      <!-- <span class="subtitle-RightUp" id="currentTime"></span> -->
+      <span class="subtitle-RightUp">250415 배포</span>
+      
+      <span class="subtitle">MP dodo32</span>
+      <span class="subtitle-left">초기화</span>
+    </div>
+
+    <div class="input-box"><label onclick="clearInputField('연소득')">연 소득</label><input type="text" id="연소득" inputmode="numeric" oninput="formatNumber(this); calculateDTI();" onblur="calculateDTI();"></div>
+    <div class="input-box"><label onclick="clearInputField('대출금액')">대출 금액</label><input type="text" id="대출금액" inputmode="numeric" oninput="formatNumber(this); 월납부액계산(); calculateDTI();" onblur="calculateDTI();"></div>
+    <div class="input-box"><label onclick="clearInputField('대출금리')">대출 금리</label><input type="text" id="대출금리" inputmode="decimal" oninput="formatPercentage(this); 월납부액계산(); calculateDTI();" onkeydown="handlePercentageBackspace(this, event);" onblur="calculateDTI();"></div>
+    <div class="input-box"><label onclick="clearInputField('부채금액')">부채 금액</label><input type="text" id="부채금액" inputmode="numeric" oninput="formatNumber(this); calculateDTI();" onblur="calculateDTI();"></div>
+    <div class="input-box"><label onclick="clearInputField('부채금리')">부채 금리</label><input type="text" id="부채금리" inputmode="decimal" oninput="formatPercentage(this); calculateDTI();" onkeydown="handlePercentageBackspace(this, event);" onblur="calculateDTI();"></div>
+    <div class="input-box"><label>DTI</label><input type="text" id="DTI" readonly></div>
+    <div class="input-box"><label>월 상환액</label><input type="text" id="월상환액" readonly></div>
+
+    <div class="button-group">
+      <button class="카드버튼" onclick="updateFields('카드사용액')">카드</button>
+      <button class="건보버튼" onclick="updateFields('건강보험')">건보</button>
+      <button class="연금버튼" onclick="updateFields('연금납부')">연금</button>
+      <button class="전월세버튼" onclick="updateFields('전월세')">전.월세</button>
+      <button class="주신보" onclick="updateFields('주신보')">주신보</button>
+
+    </div>
+
+    <div class="input-box blue"><label>연 사용액</label><input type="text" inputmode="numeric" id="annualUsage" oninput="formatNumber(this); updateConversionAmount();"></div>
+    <div class="input-box blue"><label>환산 금액</label><input type="text" id="conversionAmount" readonly></div>
+    <div class="input-box"><label>환산 수식</label><input type="text" id="conversionFormula" value="계산할 방법 선택하세요" style="text-align:center;font-weight: bold;" readonly></div>
+
+    <p style="color: blue; font-weight: bold; margin: 5px 0;">"신용,주담대 상환조건으로 DTI 산출 불가."</p>
+
+    <button id="showPopup" style="margin-top: 20px; padding: 10px; font-weight: bold;">신용점수 기준</button>
+    <button id="showFutureIncomePopup" style="margin-top: 20px; padding: 10px; font-weight: bold;">장래예상소득</button>
+
+    <div id="imagePopup" class="popup-container">
+      <div class="popup-content">
+        <img id="popupImg" src="신용점수기준.png" alt="팝업 이미지">
+      </div>
+    </div>
+    <div id="futureIncomePopup" class="popup-container">
+      <div class="popup-content">
+        <img id="futureIncomeImg" src="장래예상소득증가율.png" alt="장래예상소득 증가율 이미지">
+      </div>
+    </div>
+  </div>
+</body>
+</html>
