@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- 문서의 문자 인코딩을 UTF-8로 설정 -->
+  <meta charset="UTF-8" />
+  <!-- 화면 크기에 따라 콘텐츠를 조정하도록 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 페이지 제목 -->
+  <title>DTI 계산기</title>
+  <style>
+    /* 페이지 전체의 여백과 패딩을 제거하고 높이를 100%로 설정 */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    /* iframe의 크기를 설정하고 테두리를 제거 */
+    iframe {
+      width: 100%;
+      height: calc(100% - 50px); /* 버튼 컨테이너 높이를 제외한 나머지 */
+      border: none;
+    }
+    /* 버튼 컨테이너 스타일 설정 */
+    .button-container {
+      display: flex; /* 버튼을 가로로 정렬 */
+      justify-content: center; /* 버튼을 가운데 정렬 */
+      gap: 10px; /* 버튼 간 간격 */
+      padding: 10px; /* 내부 여백 */
+      background-color: #f0f0f0; /* 배경색 */
+    }
+    /* 버튼 스타일 설정 */
+    button {
+      width: 130px; /* 버튼 너비 */
+      height: 35px; /* 버튼 높이 */
+      padding: 3px 15px; /* 내부 여백 */
+      font-size: 16px; /* 글꼴 크기 */
+      cursor: pointer; /* 마우스 커서를 포인터로 변경 */
+    }
+  </style>
+  <script>
+    // 페이지를 로드하는 함수
+    function loadPage(page) {
+      // iframe의 src 속성을 변경하여 페이지를 로드
+      document.getElementById('content-frame').src = `${page}?v=${Date.now()}`;
+    }
+
+    // 페이지가 로드될 때 실행되는 함수
+    window.onload = () => {
+      // URL에 ?v=가 포함되지 않은 경우 새로고침하여 캐시를 방지
+      if (!location.href.includes('?v=')) {
+        location.href = `${location.href}?v=${Date.now()}`;
+      }
+    };
+  </script>
+</head>
+<body>
+  <!-- 버튼 컨테이너 -->
+  <div class="button-container">
+    <!-- DTI 계산기로 이동하는 버튼 -->
+    <button onclick="loadPage('main.html')">DTI 계산기</button>
+    <!-- MCG 계산기로 이동하는 버튼 -->
+    <button onclick="loadPage('MCG.html')">MCG 계산기</button>
+  </div>
+  <!-- 콘텐츠를 표시할 iframe -->
+  <iframe id="content-frame" src="main.html"></iframe>
+</body>
+</html>
